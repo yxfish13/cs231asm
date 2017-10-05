@@ -303,4 +303,5 @@ class Solver(object):
                         self.best_params[k] = v.copy()
 
         # At the end of training swap the best params into the model
+
         self.model.params = self.best_params
