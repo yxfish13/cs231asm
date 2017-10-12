@@ -263,6 +263,7 @@ class Solver(object):
         num_iterations = self.num_epochs * iterations_per_epoch
 
         for t in range(num_iterations):
+            #print("gamma0" in self.model.params,len(self.model.params))
             self._step()
 
             # Maybe print training loss

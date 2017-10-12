@@ -105,6 +105,7 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     dx = np.copy(dout)
+    #print(dx,x)
     dx[x<0] = 0
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -151,7 +152,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     - cache: A tuple of values needed in the backward pass
     """
     mode = bn_param['mode']
-    eps = bn_param.get('eps', 1e-5)
+    eps = bn_param.get('eps', 1e-7)
     momentum = bn_param.get('momentum', 0.9)
 
     N, D = x.shape
@@ -175,7 +176,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        bnX = (x - np.mean(x,axis = 0).reshape(1,D)) / np.sqrt(np.var(x,axis = 0).reshape(1,D) + eps)
+        var = np.var(x,axis = 0).reshape(1,D)
+        out = bnX * gamma.reshape(1,D) + beta.reshape(1,D)
+        cache = (x, gamma , bnX,x - np.mean(x,axis = 0).reshape(1,D),np.sqrt(np.var(x,axis = 0).reshape(1,D) + eps),var,1.0/np.sqrt(var+eps),eps )
+
+        running_mean = momentum * running_mean + (1 - momentum) * np.mean(x,axis = 0)
+        running_var = momentum * running_var + (1 - momentum) * np.var(x,axis = 0)
+
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -186,7 +194,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        bnX = (x - running_mean.reshape(1,D)) / np.sqrt(running_var.reshape(1,D))
+        out = bnX * gamma.reshape(1,D) + beta.reshape(1,D)
+        #cache = (x, gamma , beta, bnX,running_mean,running_var )
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -218,11 +228,38 @@ def batchnorm_backward(dout, cache):
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
     """
     dx, dgamma, dbeta = None, None, None
+    #eps = 1e-5
+    x,gamma,xhat,xmu,sqrtvar,var,ivar,eps = cache
+    #xhat,gamma,xmu,ivar,sqrtvar,var,eps = cache
+    N,D = dout.shape
     ###########################################################################
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    #refer https://github.com/machinelearningnanodegree/stanford-cs231/blob/master/solutions/vijendra/assignment2/cs231n/layers.py
+    dbeta = np.sum(dout,axis = 0)
+    dgamma = np.sum(xhat*dout,axis = 0)
+
+    dxhat = dout * gamma #product ka rule
+
+    divar = np.sum(dxhat * xmu,axis = 0)  #(D,)
+    dxmu1 = dxhat * ivar
+
+    dsqrtvar = -1.0/(sqrtvar**2) * divar
+    dvar = 0.5 * 1.0/np.sqrt(var + eps) * dsqrtvar 
+
+    dsq = 1. /N * np.ones((N,D)) * dvar
+
+    dxmu2 = 2 * xmu * dsq
+
+    dx1 = dxmu1 + dxmu2
+
+    dmu = -1 * np.sum(dxmu1 + dxmu2,axis = 0)
+
+    dx2 = 1./N * np.ones((N,D)) *  dmu
+
+    dx = dx1 + dx2
+    #print (dxhat,dx)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -291,7 +328,8 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
-        pass
+        mask = np.random.rand(*x.shape)<p
+        out = x * mask
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -299,7 +337,8 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # TODO: Implement the test phase forward pass for inverted dropout.   #
         #######################################################################
-        pass
+        #mask = np.ones(x.shape,dtype = np.float32) * p 
+        out = x * p
         #######################################################################
         #                            END OF YOUR CODE                         #
         #######################################################################
@@ -326,7 +365,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # TODO: Implement training phase backward pass for inverted dropout   #
         #######################################################################
-        pass
+        dx = dout * mask
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -389,7 +428,7 @@ def conv_backward_naive(dout, cache):
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     pass
-    ###########################################################################
+    ###############################################################   #######
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return dx, dw, db
